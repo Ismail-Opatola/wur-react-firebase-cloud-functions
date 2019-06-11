@@ -1,13 +1,12 @@
 const admin = require("firebase-admin");
-let db;
 
-// Initialize Firebase
-try {
-  admin.initializeApp();
-  db = admin.firestore();
-  console.log("Firebase Initialized");
-} catch (err) {
-  console.log("Error Initializing Firebase");
-}
+const serviceAccount = require("./s-a-key.json");
 
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
+});
+
+
+const db = admin.firestore();
 module.exports = { admin, db };
