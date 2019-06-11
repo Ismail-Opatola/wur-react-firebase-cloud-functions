@@ -1,7 +1,8 @@
-const { admin, db } = require("../util/admin");
-const config = require("../util/config");
+const { admin, db } = require("../util/admin"),
+  config = require("../util/config"),
+  client = require("firebase"),
+  { validateSignupData, validateLoginData } = require("../util/validation");
 
-const client = require("firebase");
 client.initializeApp(config);
 
 // Sign user up
@@ -15,8 +16,9 @@ exports.signup = (req, res) => {
     fullname: `${req.body.firstName} ${req.body.lastName}`
   };
 
-  // TODO: validation
-  
+  const { valid, errors } = validateSignupData(newUser);
+  if (!valid) return res.status(400).json(errors);
+
   const noImg = "no-img.png";
   let userId, token;
 
@@ -40,9 +42,7 @@ exports.signup = (req, res) => {
         votes: [],
         userId: userId
       };
-      return db
-        .doc(`users/${userId}`)
-        .set(userCredentials);
+      return db.doc(`users/${userId}`).set(userCredentials);
     })
     .then(() => {
       return res.status(201).json({ token });
@@ -65,6 +65,9 @@ exports.login = (req, res) => {
     email: req.body.email,
     password: req.body.password
   };
+
+  const { valid, errors } = validateLoginData(user);
+  if (!valid) return res.status(400).json(errors);
 
   client
     .auth()
