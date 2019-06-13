@@ -22,12 +22,12 @@ exports.signup = (req, res) => {
   const noImg = "no-img.png";
   let userId, token;
 
-  client
+  admin
     .auth()
-    .createUserWithEmailAndPassword(newUser.email, newUser.password)
-    .then(data => {
-      userId = data.user.uid;
-      return data.user.getIdToken();
+    .createUser({email: newUser.email, password: newUser.password})
+    .then(userRecord => {
+      userId = userRecord.uid;
+      return admin.auth().createCustomToken(userRecord.uid);
     })
     .then(idToken => {
       token = idToken;
@@ -84,3 +84,5 @@ exports.login = (req, res) => {
         .json({ general: "Wrong credentials, please try again" });
     });
 };
+
+
