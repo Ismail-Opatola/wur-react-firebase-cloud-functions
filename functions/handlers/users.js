@@ -169,6 +169,7 @@ exports.login = (req, res) => {
 // };
 
 exports.uploadImage = (req, res) => {
+  // TODO: FIX ERROR FROM BOSBOY
   const BusBoy = require("busboy");
   const path = require("path");
   const os = require("os");
@@ -253,7 +254,7 @@ exports.addUserDetails = (req, res) => {
 exports.getAuthenticatedUser = (req, res) => {
   let userData = {};
   db.doc(`users/${req.user.uid}`).get().then((doc) => {
-    if(data.exist) {
+    if(doc.exist) {
       userData.credentials = doc.data(); 
       return res.json(userData);
     }
@@ -264,3 +265,40 @@ exports.getAuthenticatedUser = (req, res) => {
   })
 }
 
+exports.getUserDetails = (req, res) => {
+  let userDetails = {};
+  db.doc(`users/${req.params.id}`).get().then((doc) => {
+    if (doc.exists) {
+      userData.user = doc.data()
+      return db.collection('questions')
+        .where('authorId', '==', req.params.id)
+        .orderBy('createdAt', 'desc')
+        .get();
+    } else {
+      return res.status(404).json({error: 'User not found'})
+    }
+  }).then((data) => {
+    userData.questions = [];
+    data.forEach(doc => {
+      userData.questions.push({
+          questionId: doc.id,
+          author: doc.data().author, 
+          authorId: doc.data().authorId,
+          authorImg: doc.data().authorImg,
+          createdAt: doc.data().createdAt,
+          optionOne: {
+            votes: doc.data().optionOne.votes,
+            text: doc.data().optionOne.text
+          },
+          optionTwo: {
+            votes: doc.data().optionTwo.votes,
+            text: doc.data().optionTwo.text
+          }
+      })
+    })
+    return res.json(userData);
+  }).catch((err) => {
+    console.log('getUserDetails err.........>>>>>>>>>', err);
+    return res.status(500).json({error: err.code});
+  });
+}
