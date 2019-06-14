@@ -1,7 +1,7 @@
 const { admin, db } = require("../util/admin"),
   config = require("../util/config"),
   client = require("firebase"),
-  { validateSignupData, validateLoginData } = require("../util/validation");
+  { validateSignupData, validateLoginData, reduceUserDetails } = require("../util/validation");
 
 client.initializeApp(config);
 
@@ -236,3 +236,16 @@ exports.uploadImage = (req, res) => {
 
   busboy.end(req.rawBody);
 };
+
+exports.addUserDetails = (req, res) => {
+  let userDetails = reduceUserDetails(req.body);
+
+  db.doc(`/users/${req.user.uid}`).update(userDetails)
+  .then(() => {
+    return res.json({message: 'Details added successfully'});
+  }).catch((err) => {
+    console.log('addUserDetails error catching.....>>>>>>>>>', err)
+    return res.status(500).json({error: err.code});
+  })
+}
+
