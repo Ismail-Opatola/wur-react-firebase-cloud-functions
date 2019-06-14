@@ -249,3 +249,18 @@ exports.addUserDetails = (req, res) => {
   })
 }
 
+// Get own user details
+exports.getAuthenticatedUser = (req, res) => {
+  let userData = {};
+  db.doc(`users/${req.user.uid}`).get().then((doc) => {
+    if(data.exist) {
+      userData.credentials = doc.data(); 
+      return res.json(userData);
+    }
+    // TODO: ADD USER NOTIFICATIONS TO DATA
+  }).catch(err => {
+    console.error(err);
+    return res.status(500).json({ error: err.code });
+  })
+}
+
