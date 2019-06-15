@@ -1,7 +1,11 @@
 const { admin, db } = require("../util/admin"),
   config = require("../util/config"),
   client = require("firebase"),
-  { validateSignupData, validateLoginData, reduceUserDetails } = require("../util/validation");
+  {
+    validateSignupData,
+    validateLoginData,
+    reduceUserDetails
+  } = require("../util/validation");
 
 client.initializeApp(config);
 
@@ -123,7 +127,7 @@ exports.login = (req, res) => {
 //       });
 
 //     });
-    
+
 //     // busboy.on('error', (error) => {
 //     //   console.log('Fix this:', error.stack, error);
 //     // });
@@ -194,7 +198,7 @@ exports.uploadImage = (req, res) => {
     });
 
     const imageExtension = filename.split(".")[filename.split(".").length - 1];
-    
+
     // 32756238461724837.png
     imageFileName = `${Math.round(
       Math.random() * 1000000000000
@@ -234,55 +238,74 @@ exports.uploadImage = (req, res) => {
       });
   });
 
-
   busboy.end(req.rawBody);
 };
 
 exports.addUserDetails = (req, res) => {
   let userDetails = reduceUserDetails(req.body);
 
-  db.doc(`/users/${req.user.uid}`).update(userDetails)
-  .then(() => {
-    return res.json({message: 'Details added successfully'});
-  }).catch((err) => {
-    console.log('addUserDetails error catching.....>>>>>>>>>', err)
-    return res.status(500).json({error: err.code});
-  })
-}
+  return db
+    .doc(`/users/${req.user.uid}`)
+    .update(userDetails)
+    .then(() => {
+      return res.json({ message: "Details added successfully" });
+    })
+    .catch(err => {
+      console.log("addUserDetails error catching.....>>>>>>>>>", err);
+      return res.status(500).json({ error: err.code });
+    });
+};
 
 // Get own user details
 exports.getAuthenticatedUser = (req, res) => {
+
   let userData = {};
-  db.doc(`users/${req.user.uid}`).get().then((doc) => {
-    if(doc.exist) {
-      userData.credentials = doc.data(); 
+  return db
+    .doc(`/users/${req.user.uid}`)
+    .get()
+    .then((doc) => {
+      if (doc.exists) {
+        userData.credentials = doc.data();
+      } else {
+        throw new Error("fetching...........>>>>>>>>> doc not found");
+      }
+      // TODO: ADD USER NOTIFICATIONS TO DATA
+    })
+    .then(() => {
       return res.json(userData);
-    }
-    // TODO: ADD USER NOTIFICATIONS TO DATA
-  }).catch(err => {
-    console.error(err);
-    return res.status(500).json({ error: err.code });
-  })
-}
+    })
+    .catch(err => {
+      console.error(
+        "getAuthenticatedUser error catching.......>>>>>>>>>>>>",
+        err
+      );
+      return res.status(500).json({ error: err.code });
+    });
+};
 
 exports.getUserDetails = (req, res) => {
-  let userDetails = {};
-  db.doc(`users/${req.params.id}`).get().then((doc) => {
-    if (doc.exists) {
-      userData.user = doc.data()
-      return db.collection('questions')
-        .where('authorId', '==', req.params.id)
-        .orderBy('createdAt', 'desc')
-        .get();
-    } else {
-      return res.status(404).json({error: 'User not found'})
-    }
-  }).then((data) => {
-    userData.questions = [];
-    data.forEach(doc => {
-      userData.questions.push({
+  let userData = {};
+  return db
+    .doc(`users/${req.params.id}`)
+    .get()
+    .then(doc => {
+      if (doc.exists) {
+        userData.user = doc.data();
+        return db
+          .collection("questions")
+          .where("authorId", "==", req.params.id)
+          .orderBy("createdAt", "desc")
+          .get();
+      } else {
+        return res.status(404).json({ error: "User not found" });
+      }
+    })
+    .then(data => {
+      userData.questions = [];
+      data.forEach(doc => {
+        userData.questions.push({
           questionId: doc.id,
-          author: doc.data().author, 
+          author: doc.data().author,
           authorId: doc.data().authorId,
           authorImg: doc.data().authorImg,
           createdAt: doc.data().createdAt,
@@ -294,11 +317,12 @@ exports.getUserDetails = (req, res) => {
             votes: doc.data().optionTwo.votes,
             text: doc.data().optionTwo.text
           }
-      })
+        });
+      });
+      return res.json(userData);
     })
-    return res.json(userData);
-  }).catch((err) => {
-    console.log('getUserDetails err.........>>>>>>>>>', err);
-    return res.status(500).json({error: err.code});
-  });
-}
+    .catch(err => {
+      console.log("getUserDetails err.........>>>>>>>>>", err);
+      return res.status(500).json({ error: err.code });
+    });
+};
