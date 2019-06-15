@@ -27,10 +27,9 @@ module.exports = async req => {
   }
 };
 
-// AnOfTpowYsNpwd08KhTFDpqNpWs1 user22
-// qdVhvjxLnxNf6jYSdxBpGA1QNv33 user1
-
 // Case
 // user may enter Hearders Authorization as 'Bearer <fakeToken>', 'Bearer ', 'Be', '...empty'
 // If statement Checks for Auth, Auth starts with 'Bearer ', Auth contains two strings
 // If error such as fake token 'Bearer <fakeToken>' return hasUid as false
+
+// Promise.reject({hasUid})
