@@ -26,15 +26,26 @@ exports.signup = (req, res) => {
   const noImg = "no-img.png";
   let userId, token;
 
-  admin
+  // @ ref: https://firebase.google.com/docs/auth/admin/verify-id-tokens
+  client
     .auth()
-    .createUser({ email: newUser.email, password: newUser.password })
+    .createUserWithEmailAndPassword(newUser.email, newUser.password)
     .then(userRecord => {
-      userId = userRecord.uid;
-      return admin.auth().createCustomToken(userRecord.uid);
+      // userId = userRecord.user.uid;
+      // console.log('USERID:', userId);
+      return userRecord.user.getIdToken();
+      // [recommended]: client.auth().currentUser.getIdtoken()
+      // return admin.auth().createCustomToken(userRecord.uid);
     })
     .then(idToken => {
       token = idToken;
+      // idToken comes from the client app
+      return admin.auth().verifyIdToken(idToken);
+    })
+    .then(function(decodedToken) {
+      userId = decodedToken.uid;
+      // console.log("DECODED:", decodedToken);
+      // console.log("UID:", uid);
       const userCredentials = {
         fullname: newUser.fullname,
         createdAt: new Date().toISOString(),
@@ -70,22 +81,28 @@ exports.login = (req, res) => {
     password: req.body.password
   };
 
+  let token;
+
   const { valid, errors } = validateLoginData(user);
   if (!valid) return res.status(400).json(errors);
 
   client
     .auth()
     .signInWithEmailAndPassword(user.email, user.password)
-    .then(data => {
+    .then((data) => {
       return data.user.getIdToken();
+    }).then((idToken) => {
+      token = idToken;
+      return admin.auth().verifyIdToken(idToken);
     })
-    .then(token => {
+    .then(() => {
       return res.json({ token });
     })
-    .catch(_err => {
+    .catch(err => {
+      console.log(err)
       return res
         .status(403)
-        .json({ general: "Wrong credentials, please try again" });
+        .json({ general: "Wrong credentials, please try again", error: err.message });
     });
 };
 
@@ -258,12 +275,11 @@ exports.addUserDetails = (req, res) => {
 
 // Get own user details
 exports.getAuthenticatedUser = (req, res) => {
-
   let userData = {};
   return db
     .doc(`/users/${req.user.uid}`)
     .get()
-    .then((doc) => {
+    .then(doc => {
       if (doc.exists) {
         userData.credentials = doc.data();
       } else {
@@ -286,14 +302,14 @@ exports.getAuthenticatedUser = (req, res) => {
 exports.getUserDetails = (req, res) => {
   let userData = {};
   return db
-    .doc(`users/${req.params.id}`)
+    .doc(`users/${req.params.userId}`)
     .get()
     .then(doc => {
       if (doc.exists) {
         userData.user = doc.data();
         return db
           .collection("questions")
-          .where("authorId", "==", req.params.id)
+          .where("authorId", "==", req.params.userId)
           .orderBy("createdAt", "desc")
           .get();
       } else {
