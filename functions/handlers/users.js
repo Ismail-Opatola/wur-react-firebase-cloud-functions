@@ -1,5 +1,5 @@
 const { admin, db } = require("../util/admin"),
-  config = require("../util/config"),
+  config = require("../util/fbconfig"),
   client = require("firebase"),
   {
     validateSignupData,

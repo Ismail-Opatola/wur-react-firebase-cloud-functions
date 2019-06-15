@@ -71,4 +71,4 @@ node_modules/
 functions/util/s-a-key.json
 
 # firebaseConfig
-functions/util/config.js
+functions/util/fbconfig.js
