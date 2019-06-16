@@ -6,7 +6,7 @@ const cors = require("cors");
 app.use(cors({origin: true}));
 
 const { signup, login, uploadImage, addUserDetails, getAuthenticatedUser, getUserDetails } = require("./handlers/users");
-const { getAllQuestions, postQuestion, getQuestion } = require("./handlers/questions");
+const { getAllQuestions, postQuestion, getQuestion, postVote } = require("./handlers/questions");
 
 // users routes
 app.post("/signup", signup);
@@ -17,8 +17,9 @@ app.get('/user', FBAuth, getAuthenticatedUser);
 app.get('/user/:userId', getUserDetails);
 
 // question routes
-app.get('/questions', getAllQuestions);
 app.post('/question', FBAuth, postQuestion);
+app.post('/question/:questionId', FBAuth, postVote);
+app.get('/questions', getAllQuestions);
 app.get('/question/:questionId', getQuestion);
 
 app.get("/", (request, response) => {
