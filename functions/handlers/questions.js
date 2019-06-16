@@ -46,6 +46,15 @@ exports.postQuestion = async (req, res) => {
   try {
     console.time("START_TIME");
 
+    if (
+      !req.body &&
+      req.body.trim() === "" &&
+      req.body.optionOne.trim() === "" &&
+      req.body.optionTwo.trim() === ""
+    ) {
+      return res.status(400).json({ body: "Options must not be empty" });
+    }
+
     let newQuestionRef = await db.collection("questions").doc();
     let authorProfile = await db.collection("users").doc(req.user.uid);
 
@@ -81,6 +90,7 @@ exports.postQuestion = async (req, res) => {
     ]).then(() => res.json(newPost));
   } catch (error) {
     console.log("postQuestion Error:", error);
+    res.status(500).json({ error: "something went wrong" });
   }
 };
 
@@ -193,5 +203,73 @@ exports.getQuestion = async (req, res) => {
   }
 };
 
-// TODO: ANWSER postQuestion
+// TODO: ANWSER postVote
+exports.postVote = async (req, res) => {
+  try {
+    if (
+      !req.body &&
+      req.body.trim() === "" &&
+      req.body.vote.trim() === "" &&
+      (req.body.vote.trim() !== "optionOne" ||
+        req.body.vote.trim() !== "optionTwo")
+    ) {
+      return res.status(400).json({ body: "Nice try!" });
+    }
+
+    let doc = await db.doc(`questions/${req.params.questionId}`).get(),
+      userProfile = await db
+        .collection("users")
+        .doc(req.user.uid)
+        .get();
+
+    // @ doc doesn't exist?
+    // @ return error
+    if (!doc.exists && !userProfile.exists) {
+      return res.status(404).json({ error: "question not found" });
+    }
+
+    // @ if already captured?
+    // @ return error
+    if (doc.data().optionOne.votes.includes(req.user.uid) && userProfile.data().votes.includes(req.params.questionId)) {
+      return res.status(400).json({ error: "vote already captured" });
+    }
+
+    let questionUpdate, userProfileUpdate;
+    if (req.body.vote === "optionOne") {
+      questionUpdate = {
+        "optionOne.votes": admin.firestore.FieldValue.arrayUnion(req.user.uid)
+      };
+      userProfileUpdate = {
+        score: admin.firestore.FieldValue.increment(1),
+        votes: admin.firestore.FieldValue.arrayUnion(req.params.questionId)
+      };
+    }
+    if (req.body.vote === "optionTwo") {
+      questionUpdate = {
+        "optionTwo.votes": admin.firestore.FieldValue.arrayUnion(req.user.uid)
+      };
+      userProfileUpdate = {
+        score: admin.firestore.FieldValue.increment(1),
+        votes: admin.firestore.FieldValue.arrayUnion(req.params.questionId)
+      };
+    }
+
+    // TODO: Notification
+
+    let updateQuestionVotes = await doc.ref.update(questionUpdate);
+    let updateUserVotes = await userProfile.ref.update(userProfileUpdate);
+
+    return Promise.all([doc, userProfile, updateQuestionVotes, updateUserVotes]).then(() =>
+      res.status(201).json({ message: "captured successsfully" })
+    );
+  } catch (error) {
+    console.log("postVote error catching........>>>>>>>>", error);
+    res.status(500).json({ error: "uncaptured, please try again" });
+  }
+};
+
 // TODO: DELETE postQuestion
+  // TODO: remove question from collection
+  // TODO: remove question auth user questions
+  // TODO: remove question if from voters votes array
+
