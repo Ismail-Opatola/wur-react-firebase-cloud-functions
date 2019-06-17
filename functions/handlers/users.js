@@ -354,5 +354,24 @@ exports.getUserDetails = (req, res) => {
     });
 };
 
-// TODO: markNotificationsRead
-// TODO: DELETE USER ACCOUNT
+// @ mark read notifications
+exports.markNotificationsRead = (req, res) => {
+  // when u open a dropdown that has a couple of notifications that are not read, we're gonna send to our server an array of Ids of those notifications that the user has just seen, so we can mark them as 'read' so they're not marked as unread on the client side any more...
+  // use batch writes: when you need to write/update multiple docs
+  let batch = db.batch();
+  req.body.forEach((notificationId) => {
+    const notification = db.doc(`/notifications/${notificationId}`);
+    batch.update(notification, { read: true });
+  });
+  // once the forEach is done
+  batch
+    .commit()
+    .then(() => {
+      return res.json({ message: 'Notifications marked read' });
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
+};
+
