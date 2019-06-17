@@ -203,7 +203,7 @@ exports.getQuestion = async (req, res) => {
   }
 };
 
-// TODO: ANWSER postVote
+// ANWSER postVote
 exports.postVote = async (req, res) => {
   try {
     if (
@@ -234,6 +234,7 @@ exports.postVote = async (req, res) => {
       return res.status(400).json({ error: "vote already captured" });
     }
 
+    // @ conditional update
     let questionUpdate, userProfileUpdate;
     if (req.body.vote === "optionOne") {
       questionUpdate = {
@@ -256,8 +257,8 @@ exports.postVote = async (req, res) => {
 
     // TODO: Notification
 
-    let updateQuestionVotes = await doc.ref.update(questionUpdate);
-    let updateUserVotes = await userProfile.ref.update(userProfileUpdate);
+    let updateQuestionVotes = await doc.ref.update(questionUpdate),
+    updateUserVotes = await userProfile.ref.update(userProfileUpdate);
 
     return Promise.all([doc, userProfile, updateQuestionVotes, updateUserVotes]).then(() =>
       res.status(201).json({ message: "captured successsfully" })
@@ -268,8 +269,27 @@ exports.postVote = async (req, res) => {
   }
 };
 
-// TODO: DELETE postQuestion
+// TODO: deleteQuestion
   // TODO: remove question from collection
-  // TODO: remove question auth user questions
-  // TODO: remove question if from voters votes array
+
+exports.deleteQuestion = async (req, res) => {
+  try {
+    let document = db.collection('questions').doc(`${req.params.questionId}`),
+      doc = await document.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'question not found' });
+    }
+    if (doc.data().authorId !== req.user.uid) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    } else {
+      await document.delete();
+    }
+    return res.json({message: 'question deleted successfully'})
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.code });
+  }
+}
+
+
 
