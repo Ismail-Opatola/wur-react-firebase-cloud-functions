@@ -52,21 +52,20 @@ exports.api = functions.https.onRequest(app);
 //        https://cloud.google.com/functions/docs/bestpractices/tips#performance
 //        https://www.youtube.com/playlist?list=PLIivdWyY5sqK5zce0-fd1Vam7oPY-s_8X
 
-// @ if user profile image has changed 
+// @ if user profile image has changed
 // @ Update all user's created questions img field
 exports.onUserImageChange = functions
-  .region('us-central1')
-  .firestore.document('/users/{userId}')
-  .onUpdate((change) => {
-
+  .region("us-central1")
+  .firestore.document("/users/{userId}")
+  .onUpdate(change => {
     if (change.before.data().imageUrl !== change.after.data().imageUrl) {
       const batch = db.batch();
       return db
-        .collection('questions')
-        .where('authorId', '==', change.before.data().userId)
+        .collection("questions")
+        .where("authorId", "==", change.before.data().userId)
         .get()
-        .then((data) => {
-          data.forEach((doc) => {
+        .then(data => {
+          data.forEach(doc => {
             const question = db.doc(`/questions/${doc.id}`);
             batch.update(question, { authorImg: change.after.data().imageUrl });
           });
@@ -144,7 +143,16 @@ exports.onQuestionDelete = functions
           questions: admin.firestore.FieldValue.arrayRemove(questionId),
           score: admin.firestore.FieldValue.increment(-1)
         });
-        // TODO: deleteNotificationOnQuestionDelete
+        return db
+          .collection("notifications")
+          .where("recipient", "==", context.auth.uid)
+          .where("questionId", "==", questionId)
+          .get();
+      })
+      .then(data => {
+        data.forEach(doc => {
+          batch.delete(db.doc(`/notifications/${doc.id}`)); // delete notifications
+        });
         return batch.commit();
       })
       .catch(err => console.error(err));
