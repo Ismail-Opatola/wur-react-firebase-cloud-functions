@@ -52,7 +52,28 @@ exports.api = functions.https.onRequest(app);
 //        https://cloud.google.com/functions/docs/bestpractices/tips#performance
 //        https://www.youtube.com/playlist?list=PLIivdWyY5sqK5zce0-fd1Vam7oPY-s_8X
 
-// TODO: onImageChange
+// @ if user profile image has changed 
+// @ Update all user's created questions img field
+exports.onUserImageChange = functions
+  .region('us-central1')
+  .firestore.document('/users/{userId}')
+  .onUpdate((change) => {
+
+    if (change.before.data().imageUrl !== change.after.data().imageUrl) {
+      const batch = db.batch();
+      return db
+        .collection('questions')
+        .where('authorId', '==', change.before.data().userId)
+        .get()
+        .then((data) => {
+          data.forEach((doc) => {
+            const question = db.doc(`/questions/${doc.id}`);
+            batch.update(question, { authorImg: change.after.data().imageUrl });
+          });
+          return batch.commit();
+        });
+    } else return true;
+  });
 
 exports.createNotificationOnVote = functions
   .region("us-central1")
