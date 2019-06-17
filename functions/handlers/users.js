@@ -31,11 +31,7 @@ exports.signup = (req, res) => {
     .auth()
     .createUserWithEmailAndPassword(newUser.email, newUser.password)
     .then(userRecord => {
-      // userId = userRecord.user.uid;
-      // console.log('USERID:', userId);
       return userRecord.user.getIdToken();
-      // [recommended]: client.auth().currentUser.getIdtoken()
-      // return admin.auth().createCustomToken(userRecord.uid);
     })
     .then(idToken => {
       token = idToken;
@@ -44,8 +40,6 @@ exports.signup = (req, res) => {
     })
     .then(function(decodedToken) {
       userId = decodedToken.uid;
-      // console.log("DECODED:", decodedToken);
-      // console.log("UID:", uid);
       const userCredentials = {
         fullname: newUser.fullname,
         createdAt: new Date().toISOString(),
@@ -342,3 +336,6 @@ exports.getUserDetails = (req, res) => {
       return res.status(500).json({ error: err.code });
     });
 };
+
+
+// TODO: DELETE USER ACCOUNT
