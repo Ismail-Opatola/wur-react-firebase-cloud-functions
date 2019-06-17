@@ -51,15 +51,26 @@ exports.validateLoginData = data => {
 };
 
 exports.reduceUserDetails = (data) => {
-  let userDetails = {};
+  let userDetails = {...data};
 
-  if(!isEmpty(data.bio.trim())) userDetails.bio = data.bio;
-  if(!isEmail(data.website.trim())) {
-    if (data.website.trim().substring(0, 4) !== 'http') {
-      userDetails.website = `http://${data.website.trim()}`;
-    } else userDetails.website = data.website;
+  // @ Note: change to code:
+  // @ before
+  // @ if any data field is passed empty with delete-intent, because data field isEmpty, firestore is unmutated
+  // @ after
+  // @ remove isEmtpy check to support delete-intent, only data.web field is check to prefix http if data field !isEmpty ie no delete-intent. now firestore return mutated
+  // @ reason: user might intend to delete data by passing empty the fields
+
+  // if(!isEmpty(data.bio.trim())) userDetails.bio = data.bio;
+
+  if(!isEmpty(data.website.trim())) {
+    if(!isEmail(data.website.trim())) {
+      if (data.website.trim().substring(0, 4) !== 'http') {
+        userDetails.website = `http://${data.website.trim()}`;
+      } else userDetails.website = data.website;
+    }
   }
-  if(!isEmpty(data.location.trim())) userDetails.location = data.location;
+  
+  // if(!isEmpty(data.location.trim())) userDetails.location = data.location;
 
   return userDetails;
 }
