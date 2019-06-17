@@ -118,6 +118,7 @@ exports.createNotificationOnVote = functions
   });
 
 // @ wipe questionID from author and voter's doc
+// @ delete question vote notifications
 exports.onQuestionDelete = functions
   .region("us-central1")
   .firestore.document("/questions/{questionId}")
