@@ -19,6 +19,7 @@ const {
   postVote,
   deleteQuestion
 } = require("./handlers/questions");
+const { getLeaderBoard } = require("./handlers/leaderboard");
 
 // users routes
 app.post("/signup", signup);
@@ -34,6 +35,9 @@ app.post("/question/:questionId", FBAuth, postVote);
 app.delete("/question/:questionId", FBAuth, deleteQuestion);
 app.get("/questions", getAllQuestions);
 app.get("/question/:questionId", getQuestion);
+
+// leaderboard route
+app.get("/leaderboard", getLeaderBoard);
 
 app.get("/", (request, response) => {
   response.send("Hello from Firebase!");
