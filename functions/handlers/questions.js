@@ -44,8 +44,6 @@ exports.getAllQuestions = (req, res) => {
 
 exports.postQuestion = async (req, res) => {
   try {
-    console.time("START_TIME");
-
     if (
       !req.body &&
       req.body.trim() === "" &&
@@ -79,8 +77,6 @@ exports.postQuestion = async (req, res) => {
       questions: admin.firestore.FieldValue.arrayUnion(newQuestionRef.id),
       score: admin.firestore.FieldValue.increment(1)
     });
-
-    console.timeEnd("END_TIME");
 
     return Promise.all([
       newQuestionRef,
