@@ -269,9 +269,8 @@ exports.postVote = async (req, res) => {
   }
 };
 
-// TODO: deleteQuestion
-  // TODO: remove question from collection
-
+// @ DELETE QUESTION
+// @ HAS TRIGGER >> onDeleteQusetion (wipe questionID from author and voter's doc)
 exports.deleteQuestion = async (req, res) => {
   try {
     let document = db.collection('questions').doc(`${req.params.questionId}`),

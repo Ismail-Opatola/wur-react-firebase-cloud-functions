@@ -41,8 +41,7 @@ app.get("/", (request, response) => {
 
 exports.api = functions.https.onRequest(app);
 
-// @ remove questionID auth user questions field
-// @ remove questionID from voters votes field
+// @ wipe questionID from author and voter's doc
 exports.onQuestionDelete = functions
   .region("us-central1")
   .firestore.document("/questions/{questionId}")
