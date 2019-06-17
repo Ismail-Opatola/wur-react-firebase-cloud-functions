@@ -83,9 +83,10 @@ exports.login = (req, res) => {
   client
     .auth()
     .signInWithEmailAndPassword(user.email, user.password)
-    .then((data) => {
+    .then(data => {
       return data.user.getIdToken();
-    }).then((idToken) => {
+    })
+    .then(idToken => {
       token = idToken;
       return admin.auth().verifyIdToken(idToken);
     })
@@ -93,10 +94,11 @@ exports.login = (req, res) => {
       return res.json({ token });
     })
     .catch(err => {
-      console.log(err)
-      return res
-        .status(403)
-        .json({ general: "Wrong credentials, please try again", error: err.message });
+      console.log(err);
+      return res.status(403).json({
+        general: "Wrong credentials, please try again",
+        error: err.message
+      });
     });
 };
 
@@ -196,7 +198,7 @@ exports.uploadImage = (req, res) => {
   let imageFileName;
 
   busboy.on("error", function(err) {
-    console.log("Busboy error catching......>>>>>>>>>>>>>>", err);
+    console.log("Busboy error catching>>>>>>>>>>", err);
   });
 
   busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
@@ -205,7 +207,7 @@ exports.uploadImage = (req, res) => {
     }
 
     file.on("error", function(err) {
-      console.log("fstream error catching......>>>>>>>>>>>>>>", err);
+      console.log("fstream error catching>>>>>>>>>>", err);
     });
 
     const imageExtension = filename.split(".")[filename.split(".").length - 1];
@@ -262,7 +264,7 @@ exports.addUserDetails = (req, res) => {
       return res.json({ message: "Details added successfully" });
     })
     .catch(err => {
-      console.log("addUserDetails error catching.....>>>>>>>>>", err);
+      console.log("addUserDetails error catching>>>>>>>>>>", err);
       return res.status(500).json({ error: err.code });
     });
 };
@@ -276,17 +278,32 @@ exports.getAuthenticatedUser = (req, res) => {
     .then(doc => {
       if (doc.exists) {
         userData.credentials = doc.data();
-      } else {
-        throw new Error("fetching...........>>>>>>>>> doc not found");
+        return db
+          .collection("notifications")
+          .where("recipient", "==", req.user.uid)
+          .orderBy("createdAt", "desc")
+          .limit(10)
+          .get();
       }
-      // TODO: ADD USER NOTIFICATIONS TO DATA
     })
-    .then(() => {
+    .then(data => {
+      userData.notifications = [];
+      data.forEach(doc => {
+        userData.notifications.push({
+          recipient: doc.data().recipient,
+          sender: doc.data().sender,
+          createdAt: doc.data().createdAt,
+          questionId: doc.data().questionId,
+          type: doc.data().type,
+          read: doc.data().read,
+          notificationId: doc.id
+        });
+      });
       return res.json(userData);
     })
     .catch(err => {
       console.error(
-        "getAuthenticatedUser error catching.......>>>>>>>>>>>>",
+        "getAuthenticatedUser error catching>>>>>>>>>>",
         err
       );
       return res.status(500).json({ error: err.code });
@@ -332,10 +349,10 @@ exports.getUserDetails = (req, res) => {
       return res.json(userData);
     })
     .catch(err => {
-      console.log("getUserDetails err.........>>>>>>>>>", err);
+      console.log("getUserDetails error catching>>>>>>>>>>", err);
       return res.status(500).json({ error: err.code });
     });
 };
 
-
+// TODO: markNotificationsRead
 // TODO: DELETE USER ACCOUNT
