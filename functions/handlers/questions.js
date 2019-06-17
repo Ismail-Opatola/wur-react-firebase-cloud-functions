@@ -251,8 +251,6 @@ exports.postVote = async (req, res) => {
       };
     }
 
-    // TODO: Notification
-
     let updateQuestionVotes = await doc.ref.update(questionUpdate),
     updateUserVotes = await userProfile.ref.update(userProfileUpdate);
 
