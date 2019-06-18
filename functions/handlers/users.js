@@ -102,6 +102,19 @@ exports.login = (req, res) => {
     });
 };
 
+exports.signOut = (req, res) => {
+  return firebase
+    .auth()
+    .signOut()
+    .then(function() {
+      res.status(204).json({ message: "Sign-out successful" });
+    })
+    .catch(function(error) {
+      console.log("signOut error catching>>>>>>>>>", error.code);
+      return res.status(500).json({ error: "An error happened, try again" });
+    });
+};
+
 // Upload user profile Image
 // exports.uploadImage = async (req, res) => {
 //   try {
@@ -302,10 +315,7 @@ exports.getAuthenticatedUser = (req, res) => {
       return res.json(userData);
     })
     .catch(err => {
-      console.error(
-        "getAuthenticatedUser error catching>>>>>>>>>>",
-        err
-      );
+      console.error("getAuthenticatedUser error catching>>>>>>>>>>", err);
       return res.status(500).json({ error: err.code });
     });
 };
@@ -323,6 +333,7 @@ exports.getUserDetails = (req, res) => {
           .where("authorId", "==", req.params.userId)
           .orderBy("createdAt", "desc")
           .get();
+        // TODO: PAGINATION
       } else {
         return res.status(404).json({ error: "User not found" });
       }
@@ -359,7 +370,7 @@ exports.markNotificationsRead = (req, res) => {
   // when u open a dropdown that has a couple of notifications that are not read, we're gonna send to our server an array of Ids of those notifications that the user has just seen, so we can mark them as 'read' so they're not marked as unread on the client side any more...
   // use batch writes: when you need to write/update multiple docs
   let batch = db.batch();
-  req.body.forEach((notificationId) => {
+  req.body.forEach(notificationId => {
     const notification = db.doc(`/notifications/${notificationId}`);
     batch.update(notification, { read: true });
   });
@@ -367,11 +378,18 @@ exports.markNotificationsRead = (req, res) => {
   batch
     .commit()
     .then(() => {
-      return res.json({ message: 'Notifications marked read' });
+      return res.json({ message: "Notifications marked read" });
     })
-    .catch((err) => {
+    .catch(err => {
       console.error(err);
       return res.status(500).json({ error: err.code });
     });
 };
 
+// @ TODO:Delete User Account
+// TODO: delete user account
+// TODO: delete userImg from storage
+// TODO: delete user created questions from questions collection
+// TODO: delete user created questionID from other users votes array
+// TODO: delete user Email from firebase-auth
+exports.deleteUserAccount = (req, res) => {}; // return status 204
