@@ -7,11 +7,13 @@ app.use(cors({ origin: true }));
 const {
   signup,
   login,
+  signOut,
   uploadImage,
   addUserDetails,
   getAuthenticatedUser,
   getUserDetails,
-  markNotificationsRead
+  markNotificationsRead,
+  deleteUserAccount
 } = require("./handlers/users");
 const {
   getAllQuestions,
@@ -24,11 +26,13 @@ const { getLeaderBoard } = require("./handlers/leaderboard");
 
 // users routes
 app.post("/signup", signup);
-app.post("/login", login);
+app.post("/sessions", login);
+app.delete("/sessions", FB, signOut);
 app.post("/user/image", FBAuth, uploadImage);
 app.post("/user", FBAuth, addUserDetails);
 app.get("/user", FBAuth, getAuthenticatedUser);
-app.get("/user/:userId", getUserDetails);
+app.delete("/user/:userId", deleteUserAccount);
+app.get("/user/:userId", FBAuth, getUserDetails);
 app.post("/notifications", FBAuth, markNotificationsRead);
 
 // question routes
