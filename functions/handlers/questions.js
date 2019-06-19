@@ -2,6 +2,7 @@ const { admin, db } = require("../util/admin");
 const checkAuth = require("../util/checkAuth");
 
 exports.getAllQuestions = (req, res) => {
+  // TODO: Pagination
   db.collection("questions")
     .orderBy("createdAt", "desc")
     .get()
@@ -226,7 +227,10 @@ exports.postVote = async (req, res) => {
 
     // @ if already captured?
     // @ return error
-    if (doc.data().optionOne.votes.includes(req.user.uid) && userProfile.data().votes.includes(req.params.questionId)) {
+    if (
+      doc.data().optionOne.votes.includes(req.user.uid) &&
+      userProfile.data().votes.includes(req.params.questionId)
+    ) {
       return res.status(400).json({ error: "vote already captured" });
     }
 
@@ -252,11 +256,14 @@ exports.postVote = async (req, res) => {
     }
 
     let updateQuestionVotes = await doc.ref.update(questionUpdate),
-    updateUserVotes = await userProfile.ref.update(userProfileUpdate);
+      updateUserVotes = await userProfile.ref.update(userProfileUpdate);
 
-    return Promise.all([doc, userProfile, updateQuestionVotes, updateUserVotes]).then(() =>
-      res.status(201).json({ message: "captured successsfully" })
-    );
+    return Promise.all([
+      doc,
+      userProfile,
+      updateQuestionVotes,
+      updateUserVotes
+    ]).then(() => res.status(201).json({ message: "captured successsfully" }));
   } catch (error) {
     console.log("postVote error catching........>>>>>>>>", error);
     res.status(500).json({ error: "uncaptured, please try again" });
@@ -267,22 +274,19 @@ exports.postVote = async (req, res) => {
 // @ HAS TRIGGER >> onDeleteQusetion (wipe questionID from author and voter's doc)
 exports.deleteQuestion = async (req, res) => {
   try {
-    let document = db.collection('questions').doc(`${req.params.questionId}`),
+    let document = db.collection("questions").doc(`${req.params.questionId}`),
       doc = await document.get();
     if (!doc.exists) {
-      return res.status(404).json({ error: 'question not found' });
+      return res.status(404).json({ error: "question not found" });
     }
     if (doc.data().authorId !== req.user.uid) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: "Unauthorized" });
     } else {
       await document.delete();
     }
-    return res.json({message: 'question deleted successfully'})
+    return res.status(204).json({ message: "question deleted successfully" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: error.code });
   }
-}
-
-
-
+};
