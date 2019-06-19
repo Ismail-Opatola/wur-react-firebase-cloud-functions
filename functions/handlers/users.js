@@ -386,10 +386,27 @@ exports.markNotificationsRead = (req, res) => {
     });
 };
 
-// @ TODO:Delete User Account
-// TODO: delete user account
-// TODO: delete userImg from storage
-// TODO: delete user created questions from questions collection
-// TODO: delete user created questionID from other users votes array
-// TODO: delete user Email from firebase-auth
-exports.deleteUserAccount = (req, res) => {}; // return status 204
+// @ Delete User Account
+//  delete user account >> function triggers
+//  delete userImg from storage
+//  delete user created questions from questions collection
+//  delete user created questionID from other users votes and adjust their score value
+//  delete user Email from firebase-auth
+exports.deleteUserAccount = (req, res) => {
+  return admin
+    .auth()
+    .deleteUser(req.user.uid)
+    .then(function() {
+      return db.doc(`users/${req.user.uid}`).delete();
+    })
+    .then(() =>
+      res.status(200).json({ message: "Successfully deleted your account" })
+    )
+    .catch(function(error) {
+      console.log("Error deleting user:", error.code);
+      if (error.code === "auth/requires-recent-login") {
+        firebase.auth().signOut();
+        return res.status(200).json("Please sign-in and try again.");
+      }
+    });
+}; 
