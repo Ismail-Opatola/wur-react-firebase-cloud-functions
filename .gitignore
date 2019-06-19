@@ -72,3 +72,5 @@ functions/util/s-a-key.json
 
 # firebaseConfig
 functions/util/fbconfig.js
+functions/util/user_privacy.json
+functions/TODO
