@@ -1,6 +1,7 @@
 const functions = require("firebase-functions"),
   app = require("express")(),
   { admin, db, storage } = require("./util/admin"),
+  config = require("./util/fbconfig"),
   FieldValue = admin.firestore.FieldValue,
   FBAuth = require("./util/fbAuth"),
   cors = require("cors");
@@ -38,7 +39,7 @@ app.delete("/sessions", FBAuth, signOut);
 app.post("/user/image", FBAuth, uploadImage);
 app.post("/user", FBAuth, addUserDetails);
 app.get("/user", FBAuth, getAuthenticatedUser);
-app.delete("/user/:userId", deleteUserAccount);
+app.delete("/user/:userId", FBAuth, deleteUserAccount);
 app.get("/user/:userId", FBAuth, getUserDetails);
 app.post("/notifications", FBAuth, markNotificationsRead);
 
@@ -58,6 +59,62 @@ exports.api = functions.https.onRequest(app);
 // @ FUNCTIONS >> CLOUD FIRESTORE EVENT TRIGGERS
 // =============================================
 
+exports.createNotificationOnVote = functions
+  .region("us-central1")
+  .firestore.document("/questions/{questionId}")
+  .onUpdate((snapshot, context) => {
+    try {
+      if (!context.params.questionId) return Promise.resolve();
+
+      // @ Retrieve the current and previous value
+      const { questionId } = context.params,
+        data = snapshot.after.data(),
+        previousData = snapshot.before.data();
+      let voterId;
+
+      if (!data.optionOne.votes.length && !data.optionTwo.votes.length) {
+        return Promise.resolve();
+      }
+
+      // @ We'll only update if the name has changed.
+      // @ This is crucial to prevent infinite loops.
+      if (
+        data.optionOne.votes.length == previousData.optionOne.votes.length &&
+        data.optionTwo.votes.length == previousData.optionTwo.votes.length
+      )
+        return Promise.resolve();
+
+      // ======================================================
+      // @ Logic as cloud function triggers with event queues
+      // ======================================================
+      if (data.optionOne.votes.length !== previousData.optionOne.votes.length) {
+        voterId = data.optionOne.votes.slice(-1);
+      } else if (
+        data.optionTwo.votes.length !== previousData.optionTwo.votes.length
+      ) {
+        voterId = data.optionTwo.votes.slice(-1);
+      }
+
+      // if (
+      //   data.optionOne.votes.includes(context.auth.uid) ||
+      //   data.optionTwo.votes.includes(context.auth.uid)
+      // )
+      return db
+        .collection(`notifications`)
+        .add({
+          createdAt: new Date().toISOString(),
+          recipient: data.authorId,
+          sender: voterId.toString(),
+          type: "vote",
+          read: false,
+          questionId: questionId
+        })
+        .catch(err => console.error(err));
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
 /* 
 @ Delete User Account
  @ delete user Email from firebase-auth
@@ -75,37 +132,42 @@ exports.api = functions.https.onRequest(app);
 exports.deleteFile = functions
   .region("us-central1")
   .firestore.document("/users/{userId}")
-  .ondelete((change, context) => {
-    let defaultImage = "no-image",
-      imageUrl = change.data().imageUrl,
-      [, , , , , bucket, ...rest] = imageUrl.split("appspot.com"),
-      filename = rest
-        .toString()
-        .replace(",", "/")
-        .split("?alt=media")[0];
+  .onDelete((change, context) => {
+    try {
+      let defaultImage = "no-img.png",
+        imageUrl = change.data().imageUrl,
+        [, , , , , bucket, , ...rest] = imageUrl.split("/"),
+        filename = rest
+          .toString()
+          .replace(",", "/")
+          .split("?alt=media")[0];
 
-    if (filename.includes(defaultImage)) return Promise.resolve();
-    console.log("bucket=", bucket, "filename=", filename);
-
-    // using Firebase-admin SDK
-    return storage
-      .bucket(bucket)
-      .file(filename)
-      .delete()
-      .then(() => {
-        console.log(`gs://${bucket}/${filename} deleted.`);
-      })
-      .catch(err => {
-        console.error("ERROR:", err);
-      });
+      if (filename == defaultImage) {
+        return Promise.resolve();
+      } else {
+        console.log(`deleting bucket= ${bucket} filename= ${filename}`);
+        return storage
+          .bucket(bucket)
+          .file(filename)
+          .delete()
+          .then(() => {
+            console.log(`gs://${bucket}/${filename} deleted.`);
+          })
+          .catch(err => {
+            console.error("ERROR:", err);
+          });
+      }
+    } catch (error) {
+      console.error("ERROR:", err);
+    }
   });
 
 // @ Clean all data refrences, when user delete his/her account (notifications, votes, created questions etc...)
 exports.onUserAccountDelete = functions
   .region("us-central1")
   .firestore.document("/users/{userId}")
-  .onDelete((change, context) => {
-    // const { questionId } = context.params;
+  .onDelete((snapshot, context) => {
+    if (!context.params.userId) return Promise.resolve();
     const batch = db.batch();
     return db
       .collection("questions")
@@ -155,6 +217,14 @@ exports.onUserImageChange = functions
   .firestore.document("/users/{userId}")
   .onUpdate(change => {
     if (change.before.data().imageUrl !== change.after.data().imageUrl) {
+      let defaultImage = "no-img.png",
+        imageUrl = change.before.data().imageUrl,
+        [, , , , , bucket, , ...rest] = imageUrl.split("/"),
+        filename = rest
+          .toString()
+          .replace(",", "/")
+          .split("?alt=media")[0];
+
       const batch = db.batch();
       return db
         .collection("questions")
@@ -165,6 +235,19 @@ exports.onUserImageChange = functions
             const question = db.doc(`/questions/${doc.id}`);
             batch.update(question, { authorImg: change.after.data().imageUrl });
           });
+
+          if (filename == defaultImage) {
+            return Promise.resolve();
+          } else {
+            console.log(`deleting bucket= ${bucket} filename= ${filename}`);
+            return storage
+              .bucket(bucket)
+              .file(filename)
+              .delete();
+          }
+        })
+        .then(() => {
+          console.log(`gs://${bucket}/${filename} deleted.`);
           return batch.commit();
         })
         .catch(err => {
@@ -173,55 +256,13 @@ exports.onUserImageChange = functions
     } else return true;
   });
 
-exports.createNotificationOnVote = functions
-  .region("us-central1")
-  .firestore.document("/questions/{questionId}/")
-  .onUpdate((snapshot, context) => {
-    try {
-      // @ Retrieve the current and previous value
-      const { questionId } = context.params;
-      const data = snapshot.after.data();
-      const previousData = snapshot.before.data();
-
-      // @ We'll only update if the name has changed.
-      // @ This is crucial to prevent infinite loops.
-      if (
-        data.optionOne.votes.length == previousData.optionOne.votes.length &&
-        data.optionTwo.votes.length == previousData.optionTwo.votes.length
-      )
-        return null;
-
-      // ===========================================================
-      // @ Logic as cloud function triggers with event queues
-      // ===========================================================
-
-      if (
-        data.optionOne.votes.includes(context.auth.uid) ||
-        data.optionTwo.votes.includes(context.auth.uid)
-      )
-        return db
-          .collection(`notifications`)
-          .doc()
-          .set({
-            createdAt: new Date().toISOString(),
-            recipient: snapshot.data().authorId,
-            sender: context.auth.uid,
-            type: "vote",
-            read: false,
-            questionId: questionId
-          })
-          .catch(err => console.error(err));
-    } catch (err) {
-      console.error(err);
-    }
-  });
-
 // @ wipe questionID from author and voter's doc
 // @ delete question vote notifications
 exports.onQuestionDelete = functions
   .region("us-central1")
   .firestore.document("/questions/{questionId}")
   .onDelete((snapshot, context) => {
+    if (!context.params.questionId) return Promise.resolve();
     const { questionId } = context.params;
     const batch = db.batch();
     return db
@@ -236,16 +277,18 @@ exports.onQuestionDelete = functions
             score: FieldValue.increment(-1)
           });
         });
-        return db.doc(`users/${snapshot.data().authorId}`);
+         return db.doc(`users/${snapshot.data().authorId}`).get();
       })
       .then(data => {
-        batch.update(data, {
-          questions: FieldValue.arrayRemove(questionId),
-          score: FieldValue.increment(-1)
-        });
+        if(data.exists){
+          batch.update(data.ref, {
+            questions: FieldValue.arrayRemove(questionId),
+            score: FieldValue.increment(-1)
+          });
+        }
         return db
           .collection("notifications")
-          .where("recipient", "==", context.auth.uid)
+          .where("recipient", "==", snapshot.data().authorId)
           .where("questionId", "==", questionId)
           .get();
       })
