@@ -284,7 +284,7 @@ exports.deleteQuestion = async (req, res) => {
     } else {
       await document.delete();
     }
-    return res.status(204).json({ message: "question deleted successfully" });
+    return res.status(204);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: error.code });
