@@ -96,8 +96,7 @@ exports.login = (req, res) => {
     .catch(err => {
       console.log(err);
       return res.status(403).json({
-        general: "Wrong credentials, please try again",
-        error: err.message
+        general: "Wrong credentials, please try again"
       });
     });
 };
