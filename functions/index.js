@@ -6,7 +6,8 @@ const functions = require("firebase-functions"),
   FBAuth = require("./util/fbAuth"),
   cors = require("cors");
 
-app.use(cors({ origin: true }));
+// app.use(cors());
+app.use(cors({ origin: true, methods: ["POST", "GET", "DELETE"] }));
 
 const {
   signup,
@@ -40,7 +41,7 @@ app.post("/user/image", FBAuth, uploadImage);
 app.post("/user", FBAuth, addUserDetails);
 app.get("/user", FBAuth, getAuthenticatedUser);
 app.delete("/user/:userId", FBAuth, deleteUserAccount);
-app.get("/user/:userId", FBAuth, getUserDetails);
+app.get("/user/:userId", getUserDetails);
 app.post("/notifications", FBAuth, markNotificationsRead);
 
 // question routes
@@ -62,9 +63,17 @@ exports.api = functions.https.onRequest(app);
 exports.createNotificationOnVote = functions
   .region("us-central1")
   .firestore.document("/questions/{questionId}")
-  .onUpdate((snapshot, context) => {
+  .onUpdate(async(snapshot, context) => {
     try {
       if (!context.params.questionId) return Promise.resolve();
+
+      // if (context.user || context.user.uid || context.user.fullName)
+      //   console.log({
+      //     context: context,
+      //     user: context.user,
+      //     uid: context.user.uid,
+      //     fullName: context.user.fullName
+      //   });
 
       // @ Retrieve the current and previous value
       const { questionId } = context.params,
@@ -94,6 +103,8 @@ exports.createNotificationOnVote = functions
       ) {
         voterId = data.optionTwo.votes.slice(-1);
       }
+      
+      let voterData =  await db.doc(`users/${voterId}`).get()
 
       // if (
       //   data.optionOne.votes.includes(context.auth.uid) ||
@@ -105,6 +116,7 @@ exports.createNotificationOnVote = functions
           createdAt: new Date().toISOString(),
           recipient: data.authorId,
           sender: voterId.toString(),
+          senderName: voterData.data().fullname,
           type: "vote",
           read: false,
           questionId: questionId
@@ -277,10 +289,10 @@ exports.onQuestionDelete = functions
             score: FieldValue.increment(-1)
           });
         });
-         return db.doc(`users/${snapshot.data().authorId}`).get();
+        return db.doc(`users/${snapshot.data().authorId}`).get();
       })
       .then(data => {
-        if(data.exists){
+        if (data.exists) {
           batch.update(data.ref, {
             questions: FieldValue.arrayRemove(questionId),
             score: FieldValue.increment(-1)
