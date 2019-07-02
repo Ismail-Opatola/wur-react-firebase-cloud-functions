@@ -38,7 +38,7 @@ exports.getAllQuestions = (req, res) => {
       ]).then(() => res.json(questions));
     })
     .catch(err => {
-      console.log("getAllQuestions Error:", err);
+      console.error("getAllQuestions Error:", err);
       return res.status(500).json({ error: err.code });
     });
 };
@@ -50,6 +50,14 @@ exports.postQuestion = async (req, res) => {
       req.body.trim() === "" &&
       req.body.optionOne.trim() === "" &&
       req.body.optionTwo.trim() === ""
+    ) {
+      return res.status(400).json({ body: "Options must not be empty" });
+    }
+    if (
+      req.body.optionOne.trim() === "" ||
+      req.body.optionTwo.trim() === "" ||
+      !req.body.optionOne ||
+      !req.body.optionTwo
     ) {
       return res.status(400).json({ body: "Options must not be empty" });
     }
@@ -86,7 +94,7 @@ exports.postQuestion = async (req, res) => {
       updateAuthorProfile
     ]).then(() => res.json(newPost));
   } catch (error) {
-    console.log("postQuestion Error:", error);
+    console.error("postQuestion Error:", error);
     res.status(500).json({ error: "something went wrong" });
   }
 };
@@ -195,7 +203,7 @@ exports.getQuestion = async (req, res) => {
       return res.json(questionData);
     });
   } catch (error) {
-    console.log("getQuestion error catching........>>>>>>>>", error);
+    console.error("getQuestion error catching........>>>>>>>>", error);
     return res.status(500).json({ error: error.code });
   }
 };
@@ -262,10 +270,11 @@ exports.postVote = async (req, res) => {
       doc,
       userProfile,
       updateQuestionVotes,
-      updateUserVotes
-    ]).then(() => res.status(201).json({ message: "captured successsfully" }));
+      updateUserVotes,
+      doc.ref.get()
+    ]).then((docs) => res.status(201).json(docs[docs.length - 1].data()));
   } catch (error) {
-    console.log("postVote error catching........>>>>>>>>", error);
+    console.error("postVote error catching........>>>>>>>>", error);
     res.status(500).json({ error: "uncaptured, please try again" });
   }
 };
