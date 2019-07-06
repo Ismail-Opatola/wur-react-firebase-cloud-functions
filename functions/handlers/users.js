@@ -102,7 +102,7 @@ exports.login = (req, res) => {
 };
 
 exports.signOut = (req, res) => {
-  return firebase
+  return client
     .auth()
     .signOut()
     .then(function() {
