@@ -5,9 +5,7 @@ const functions = require("firebase-functions"),
   FieldValue = admin.firestore.FieldValue,
   FBAuth = require("./util/fbAuth"),
   cors = require("cors");
-
-// app.use(cors());
-app.use(cors({ origin: true, methods: ["POST", "GET", "DELETE"] }));
+  app.use(cors({ origin: true }));
 
 const {
   signup,
